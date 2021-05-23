@@ -4,7 +4,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:latlong/latlong.dart';
 import 'package:map_controller/map_controller.dart';
 import 'package:geolocator/geolocator.dart';
@@ -12,6 +11,9 @@ import 'package:geocoding/geocoding.dart';
 import 'package:osm_reports/icons.dart';
 import 'package:popup_menu/popup_menu.dart';
 import 'package:zoom_widget/zoom_widget.dart';
+import 'custom_popup.dart';
+
+LatLng _center = LatLng(38.19394, 15.55256);
 
 void main() => runApp(MyApp());
 
@@ -35,12 +37,10 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final PopupController _popupController = PopupController();
-
   List<Marker> markers = [];
   int pointIndex;
   List points = [
-    LatLng(38.19394, 15.55256),
+    _center,
     LatLng(49.8566, 3.3522),
   ];
 
@@ -122,6 +122,7 @@ class _HomePageState extends State<HomePage> {
     selected_value = value;
   }
 
+  LatLng currentPoint;
   Marker marker(LatLng latlng) {
     Marker obj;
     marker_icon_value.add(selected_value);
@@ -130,9 +131,22 @@ class _HomePageState extends State<HomePage> {
         width: 150.0,
         height: 150.0,
         point: latlng,
-        builder: (ctx) => Container(
-          child: get_icon(marker_icon_value[i]),
-        ),
+        builder: (ctx) => //Container(
+            //child: get_icon(marker_icon_value[i]),
+            GestureDetector(
+                onDoubleTap: () {
+                  setState(() {
+                    if (key.currentState != null) {}
+                    currentPoint = latlng;
+                    infoWindowVisible = !infoWindowVisible;
+                  });
+                },
+                onTap: () {
+                  setState(() {});
+                },
+                child: _buildCustomMarker(
+                    get_icon(marker_icon_value[i]), i, currentPoint == latlng)),
+        //),
       );
     }
     //markers.add(obj);
@@ -237,10 +251,11 @@ class _HomePageState extends State<HomePage> {
                   child: FlutterMap(
                     mapController: mapController,
                     options: MapOptions(
-                        center: LatLng(38.19394, 15.55256),
+                        center: _center,
                         //zoom: 13,
                         onTap: (latlng) {
                           setState(() {
+                            //addPoint(latlng);
                             markers.add(
                               marker(latlng),
                             );
@@ -252,7 +267,8 @@ class _HomePageState extends State<HomePage> {
                               "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
                           subdomains: ['a', 'b', 'c']),
                       MarkerLayerOptions(
-                        markers: [
+                        markers: //_buildMarkersOnMap()
+                            [
                           for (int i = 0; i < markers.length; i++) markers[i]
                         ],
                       ),
@@ -269,6 +285,12 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _currentPosition = position;
         _getAddressFromLatLng();
+        markers.add(Marker(
+            point: LatLng(position.latitude, position.longitude),
+            anchorPos: AnchorPos.align(AnchorAlign.center),
+            height: 30,
+            width: 30,
+            builder: (ctx) => Icon(Icons.pin_drop)));
       });
     }).catchError((e) {
       print(e);
@@ -289,5 +311,64 @@ class _HomePageState extends State<HomePage> {
     } catch (e) {
       print(e);
     }
+  }
+
+  addPoint(LatLng latlng) {
+    points.add(latlng);
+  }
+
+  /*List<Marker> _buildMarkersOnMap() {
+    List<Marker> markers = [];
+    var marker = new Marker(
+      point: points[points.length - 1],
+      width: 279.0,
+      height: 256.0,
+      builder: (context) => _buildCustomMarker(
+          get_icon(marker_icon_value[points.length - 1]), points.length - 1),
+    );
+
+    markers.add(marker);
+    return markers;
+  }*/
+
+  var infoWindowVisible = false;
+  /*List<GlobalKey<State>> josKeys = [
+    for (int i = 0; i < markers.length; i++) new GlobalKey()
+  ];*/
+  GlobalKey<State> key = new GlobalKey();
+
+  Stack _buildCustomMarker(Icon icon, int i, bool addPopUp) {
+    return Stack(
+      children: addPopUp == true
+          ? <Widget>[popup(icon), get_marker(i)]
+          : <Widget>[get_marker(i)],
+    );
+  }
+
+  Opacity popup(Icon icon) {
+    return Opacity(
+        opacity: infoWindowVisible ? 1.0 : 0.0,
+        child: Container(
+          alignment: Alignment.bottomCenter,
+          width: 279.0,
+          height: 256.0,
+          decoration: BoxDecoration(
+              image: DecorationImage(
+                  image: AssetImage("assets/images/ic_info_window.png"),
+                  fit: BoxFit.cover)),
+          child: CustomPopup(
+            key: key,
+            icon: icon,
+          ),
+        ));
+  }
+
+  Opacity get_marker(int i) {
+    return Opacity(
+      child: Container(
+          alignment: Alignment.bottomCenter,
+          child: get_icon(marker_icon_value[i])),
+      opacity: infoWindowVisible ? 0.0 : 1.0,
+    );
   }
 }

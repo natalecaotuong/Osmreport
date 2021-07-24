@@ -17,7 +17,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert' show json, base64, ascii;
 
 LatLng _center = LatLng(38.19394, 15.55256);
-const SERVER_IP = 'http://10.0.2.2:3000';
+const SERVER_IP =
+    'https://osmreports-backend.herokuapp.com'; //'http://10.0.2.2:3000';
 final storage = FlutterSecureStorage();
 
 void main() => runApp(MyApp());
